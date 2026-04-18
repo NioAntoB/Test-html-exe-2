@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morpion</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: rgba(255,255,255,0.08);
+    --accent-x: #e05c3a;
+    --accent-o: #4ea8e0;
+    --text: #f0f0ee;
+    --text-muted: #888880;
+    --win: #c8e86a;
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* ───────── HEADER ───────── */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .header h1 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .header h1 span:first-child { color: var(--accent-x); }
+  .header h1 span:last-child  { color: var(--accent-o); }
+  .header p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 0.4rem;
+  }
+
+  /* ───────── SCREENS ───────── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ───────── MODE SELECT ───────── */
+  .mode-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    text-align: center;
+    margin-bottom: 1.2rem;
+  }
+
+  .mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .mode-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.4rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    user-select: none;
+  }
+  .mode-card:hover {
+    border-color: rgba(255,255,255,0.22);
+    background: var(--surface2);
+    transform: translateY(-2px);
+  }
+  .mode-card.selected {
+    border-color: var(--win);
+    background: rgba(200,232,106,0.06);
+  }
+  .mode-icon {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+    line-height: 1;
+  }
+  .mode-label {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .mode-desc {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+  }
+
+  /* Choix du symbole */
+  .symbol-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    display: none;
+  }
+  .symbol-section.visible { display: block; }
+  .symbol-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 0.8rem;
+  }
+  .symbol-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .symbol-btn {
+    width: 72px; height: 52px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .symbol-btn:hover { border-color: rgba(255,255,255,0.3); }
+  .symbol-btn.selected-x { border-color: var(--accent-x); color: var(--accent-x); background: rgba(224,92,58,0.1); }
+  .symbol-btn.selected-o { border-color: var(--accent-o); color: var(--accent-o); background: rgba(78,168,224,0.1); }
+
+  .btn-start {
+    width: 100%;
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--win);
+    color: #0e0e10;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-start:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-start:active { transform: scale(0.98); }
+  .btn-start:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+  /* ───────── GAME SCREEN ───────── */
+  .game-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .mode-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 99px;
+    color: var(--text-muted);
+  }
+  .score-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .score-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-weight: 700;
+  }
+  .score-pill.x { background: rgba(224,92,58,0.15); color: var(--accent-x); }
+  .score-pill.o { background: rgba(78,168,224,0.15); color: var(--accent-o); }
+  .score-sep { color: var(--text-muted); font-size: 0.7rem; }
+
+  .status-bar {
+    text-align: center;
+    margin-bottom: 1.2rem;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .status-dot.x { background: var(--accent-x); }
+  .status-dot.o { background: var(--accent-o); }
+  .status-dot.win { background: var(--win); }
+  .status-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+  }
+  .status-text.highlight { color: var(--text); }
+
+  /* ───────── BOARD ───────── */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.08s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell:hover:not(.taken) {
+    background: var(--surface2);
+    border-color: rgba(255,255,255,0.18);
+    transform: scale(1.03);
+  }
+  .cell.taken { cursor: default; }
+  .cell.win-cell { border-color: var(--win) !important; background: rgba(200,232,106,0.07) !important; }
+
+  .cell-symbol {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.18s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .cell-symbol.show { opacity: 1; transform: scale(1); }
+  .cell-symbol.x { color: var(--accent-x); }
+  .cell-symbol.o { color: var(--accent-o); }
+
+  /* ───────── END BUTTONS ───────── */
+  .end-btns {
+    display: none;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .end-btns.visible { display: flex; }
+
+  .btn-end {
+    flex: 1;
+    min-width: 100px;
+    padding: 0.75rem 0.5rem;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .btn-end:hover { background: var(--surface2); border-color: rgba(255,255,255,0.22); }
+  .btn-end.primary {
+    border-color: var(--win);
+    color: #0e0e10;
+    background: var(--win);
+  }
+  .btn-end.primary:hover { opacity: 0.88; }
+
+  /* AI thinking indicator */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .thinking { animation: blink 0.9s ease-in-out infinite; }
+
+  /* Difficulté IA */
+  .diff-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .diff-section.visible { display: block; }
+  .diff-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    text-align: center;
+    margin-bottom: 0.8rem;
+  }
+  .diff-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+  .diff-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .diff-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .diff-btn.active { border-color: var(--accent-o); color: var(--accent-o); background: rgba(78,168,224,0.08); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1><span>X</span>O<span>X</span></h1>
+    <p>Morpion · Tic-Tac-Toe</p>
+  </div>
+
+  <!-- ── ÉCRAN MENU ── -->
+  <div class="screen active" id="screen-menu">
+    <p class="mode-title">Choisir le mode de jeu</p>
+
+    <div class="mode-cards">
+      <div class="mode-card" id="card-solo" onclick="selectMode('solo')">
+        <div class="mode-icon">👥</div>
+        <div class="mode-label">2 Joueurs</div>
+        <div class="mode-desc">Local · même écran</div>
+      </div>
+      <div class="mode-card" id="card-ai" onclick="selectMode('ai')">
+        <div class="mode-icon">🤖</div>
+        <div class="mode-label">Vs IA</div>
+        <div class="mode-desc">Jouer contre l'ordi</div>
+      </div>
+    </div>
+
+    <!-- Difficulté IA -->
+    <div class="diff-section" id="diff-section">
+      <p class="diff-title">Difficulté IA</p>
+      <div class="diff-btns">
+        <div class="diff-btn active" id="diff-easy" onclick="selectDiff('easy')">Facile</div>
+        <div class="diff-btn" id="diff-medium" onclick="selectDiff('medium')">Moyen</div>
+        <div class="diff-btn" id="diff-hard" onclick="selectDiff('hard')">Difficile</div>
+      </div>
+    </div>
+
+    <!-- Choix symbole (mode IA seulement) -->
+    <div class="symbol-section" id="symbol-section">
+      <p class="symbol-title">Tu joues en tant que</p>
+      <div class="symbol-btns">
+        <button class="symbol-btn selected-x" id="sym-x" onclick="selectSymbol('X')">X</button>
+        <button class="symbol-btn" id="sym-o" onclick="selectSymbol('O')">O</button>
+      </div>
+    </div>
+
+    <button class="btn-start" id="btn-start" onclick="startGame()" disabled>Choisir un mode</button>
+  </div>
+
+  <!-- ── ÉCRAN JEU ── -->
+  <div class="screen" id="screen-game">
+    <div class="game-meta">
+      <span class="mode-badge" id="mode-badge">2 Joueurs</span>
+      <div class="score-row">
+        <span class="score-pill x" id="score-x">X · 0</span>
+        <span class="score-sep">/</span>
+        <span class="score-pill o" id="score-o">O · 0</span>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Tour du joueur X</span>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="end-btns" id="end-btns">
+      <button class="btn-end primary" onclick="replayGame()">↺ Rejouer</button>
+      <button class="btn-end" onclick="changeMode()">⇄ Changer de mode</button>
+      <button class="btn-end" onclick="quitGame()">✕ Quitter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WIN_COMBOS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+let state = {
+  mode: null,       // 'solo' | 'ai'
+  diff: 'easy',
+  playerSymbol: 'X',
+  board: Array(9).fill(null),
+  current: 'X',
+  scores: {X:0, O:0},
+  over: false,
+  aiSymbol: 'O',
+};
+
+/* ─── MENU ─── */
+function selectMode(m) {
+  state.mode = m;
+  document.getElementById('card-solo').classList.toggle('selected', m==='solo');
+  document.getElementById('card-ai').classList.toggle('selected', m==='ai');
+  document.getElementById('symbol-section').classList.toggle('visible', m==='ai');
+  document.getElementById('diff-section').classList.toggle('visible', m==='ai');
+  const btn = document.getElementById('btn-start');
+  btn.disabled = false;
+  btn.textContent = m==='solo' ? 'Jouer à 2' : 'Jouer contre l\'IA';
+}
+
+function selectSymbol(s) {
+  state.playerSymbol = s;
+  document.getElementById('sym-x').className = 'symbol-btn' + (s==='X' ? ' selected-x' : '');
+  document.getElementById('sym-o').className = 'symbol-btn' + (s==='O' ? ' selected-o' : '');
+}
+
+function selectDiff(d) {
+  state.diff = d;
+  ['easy','medium','hard'].forEach(x => {
+    document.getElementById('diff-'+x).classList.toggle('active', x===d);
+  });
+}
+
+/* ─── START ─── */
+function startGame() {
+  state.board = Array(9).fill(null);
+  state.current = 'X';
+  state.over = false;
+  state.aiSymbol = state.playerSymbol === 'X' ? 'O' : 'X';
+
+  document.getElementById('screen-menu').classList.remove('active');
+  document.getElementById('screen-game').classList.add('active');
+  document.getElementById('mode-badge').textContent = state.mode==='ai' ? ('IA · '+state.diff) : '2 Joueurs';
+  document.getElementById('end-btns').classList.remove('visible');
+  updateScoreDisplay();
+  renderBoard();
+  updateStatus();
+
+  if (state.mode==='ai' && state.current===state.aiSymbol) {
+    setTimeout(aiMove, 500);
+  }
+}
+
+/* ─── BOARD ─── */
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (state.board[i] ? ' taken' : '');
+    cell.innerHTML = `<span class="cell-symbol ${state.board[i]||''} ${state.board[i]?'show':''}">${state.board[i]||''}</span>`;
+    cell.addEventListener('click', () => handleClick(i));
+    board.appendChild(cell);
+  }
+}
+
+function handleClick(i) {
+  if (state.over || state.board[i]) return;
+  if (state.mode==='ai' && state.current===state.aiSymbol) return;
+  makeMove(i);
+}
+
+function makeMove(i) {
+  state.board[i] = state.current;
+  const cell = document.getElementById('board').children[i];
+  cell.classList.add('taken');
+  const sym = cell.querySelector('.cell-symbol');
+  sym.textContent = state.current;
+  sym.className = `cell-symbol ${state.current}`;
+  requestAnimationFrame(() => sym.classList.add('show'));
+
+  const win = checkWin(state.board, state.current);
+  if (win) {
+    endGame(state.current, win);
+  } else if (state.board.every(Boolean)) {
+    endGame(null, null);
+  } else {
+    state.current = state.current==='X' ? 'O' : 'X';
+    updateStatus();
+    if (state.mode==='ai' && state.current===state.aiSymbol && !state.over) {
+      setTimeout(aiMove, 420);
+    }
+  }
+}
+
+function checkWin(board, player) {
+  for (const combo of WIN_COMBOS) {
+    if (combo.every(i => board[i]===player)) return combo;
+  }
+  return null;
+}
+
+function endGame(winner, winCombo) {
+  state.over = true;
+  if (winCombo) {
+    winCombo.forEach(i => document.getElementById('board').children[i].classList.add('win-cell'));
+  }
+  if (winner) {
+    state.scores[winner]++;
+    updateScoreDisplay();
+  }
+  updateStatus(winner);
+  document.getElementById('end-btns').classList.add('visible');
+}
+
+/* ─── STATUS ─── */
+function updateStatus(winner) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+
+  if (winner === undefined) {
+    dot.className = 'status-dot ' + state.current.toLowerCase();
+    if (state.mode==='ai' && state.current===state.aiSymbol) {
+      txt.className = 'status-text thinking';
+      txt.textContent = 'L\'IA réfléchit...';
+    } else {
+      txt.className = 'status-text highlight';
+      const label = state.mode==='ai'
+        ? (state.current===state.playerSymbol ? 'Ton tour' : 'Tour de l\'IA')
+        : `Tour du joueur ${state.current}`;
+      txt.textContent = label;
+    }
+  } else if (winner) {
+    dot.className = 'status-dot win';
+    const label = state.mode==='ai'
+      ? (winner===state.playerSymbol ? '🎉 Tu as gagné !' : '🤖 L\'IA gagne !')
+      : `🏆 Le joueur ${winner} gagne !`;
+    txt.className = 'status-text highlight';
+    txt.textContent = label;
+  } else {
+    dot.className = 'status-dot';
+    txt.className = 'status-text highlight';
+    txt.textContent = '🤝 Égalité !';
+  }
+}
+
+function updateScoreDisplay() {
+  document.getElementById('score-x').textContent = `X · ${state.scores.X}`;
+  document.getElementById('score-o').textContent = `O · ${state.scores.O}`;
+}
+
+/* ─── AI ─── */
+function aiMove() {
+  if (state.over) return;
+  const best = getBestMove(state.board, state.aiSymbol, state.diff);
+  makeMove(best);
+}
+
+function getBestMove(board, ai, diff) {
+  const empty = board.map((v,i)=>v?null:i).filter(i=>i!==null);
+  const player = ai==='X'?'O':'X';
+
+  if (diff==='easy') {
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+  if (diff==='medium') {
+    if (Math.random()<0.35) return empty[Math.floor(Math.random()*empty.length)];
+    return minimax(board,ai,ai,player).index;
+  }
+  return minimax(board,ai,ai,player).index;
+}
+
+function minimax(board, ai, player, opponent, depth=0) {
+  const win = checkWin(board, ai);
+  const lose = checkWin(board, opponent);
+  const empty = board.map((v,i)=>v?null:i).filter(i=>i!==null);
+
+  if (win)  return {score: 10-depth};
+  if (lose) return {score: depth-10};
+  if (!empty.length) return {score: 0};
+
+  const moves = [];
+  for (const i of empty) {
+    const b = [...board];
+    b[i] = player;
+    const result = minimax(b, ai, player==='X'?'O':'X', opponent, depth+1);
+    moves.push({index:i, score:result.score});
+  }
+  if (player===ai) return moves.reduce((a,b)=>b.score>a.score?b:a);
+  return moves.reduce((a,b)=>b.score<a.score?b:a);
+}
+
+/* ─── END ACTIONS ─── */
+function replayGame() {
+  state.board = Array(9).fill(null);
+  state.current = 'X';
+  state.over = false;
+  document.getElementById('end-btns').classList.remove('visible');
+  renderBoard();
+  updateStatus();
+  if (state.mode==='ai' && state.current===state.aiSymbol) setTimeout(aiMove,500);
+}
+
+function changeMode() {
+  state.scores = {X:0, O:0};
+  document.getElementById('screen-game').classList.remove('active');
+  document.getElementById('screen-menu').classList.add('active');
+  state.mode = null;
+  document.getElementById('card-solo').classList.remove('selected');
+  document.getElementById('card-ai').classList.remove('selected');
+  document.getElementById('symbol-section').classList.remove('visible');
+  document.getElementById('diff-section').classList.remove('visible');
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true;
+  btn.textContent = 'Choisir un mode';
+}
+
+function quitGame() {
+  changeMode();
+}
+</script>
+</body>
+</html>
