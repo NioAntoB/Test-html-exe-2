@@ -1,0 +1,20 @@
+{
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "frontendDist": "../"
+  },
+  "package": {
+    "productName": "MonApp",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "windows": [
+      {
+        "title": "MonApp",
+        "width": 800,
+        "height": 600
+      }
+    ]
+  }
+}
